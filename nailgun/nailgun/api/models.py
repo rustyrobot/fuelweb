@@ -457,7 +457,9 @@ class NetworkGroup(Base):
         # VM networks
         'floating',
         # private in terms of fuel
-        'fixed'
+        'fixed',
+        # mesh role for GRE
+        'mesh'
     )
 
     id = Column(Integer, primary_key=True)

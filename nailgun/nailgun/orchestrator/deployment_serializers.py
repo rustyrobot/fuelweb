@@ -211,6 +211,7 @@ class OrchestratorSerializer(object):
         network_data = node.network_data
         interfaces = cls.configure_interfaces(network_data)
         cls.__add_hw_interfaces(interfaces, node.meta['interfaces'])
+        network_scheme = cls.build_neutron_network_scheme(network_data)
         node_attrs = {
             # Yes, uid is really should be a string
             'uid': str(node.id),
@@ -224,8 +225,11 @@ class OrchestratorSerializer(object):
             # TODO (eli): need to remove, requried
             # for fucking fake thread only
             'online': node.online,
+
+            'network_scheme': network_scheme
         }
         node_attrs.update(cls.interfaces_list(network_data))
+        #import pdb; pdb.set_trace()
 
         return node_attrs
 
@@ -293,6 +297,105 @@ class OrchestratorSerializer(object):
                     network.get('vlan'))
 
         return interfaces
+
+    @classmethod
+    def build_neutron_network_scheme(cls, network_data):
+        network_list = ['admin', 'management', 'private',
+                        'mesh', 'public', 'storage']
+        role_list = [['fweb-admin'], ['management'], ['private'],
+                     ['mesh'], ['external'], ['swift', 'cinder']]
+        br_pr_list = ['', 'br-mgmt', 'br-prv', 'mesh', 'br-ex', 'storage']
+        net_role = dict(zip(network_list, role_list))
+        net_bridge = dict(zip(network_list, br_pr_list))
+        nic_net = {}
+        br_pr_tag = {}
+
+        interfaces = {}
+        endpoints = {}
+        roles = {}
+        transformations = []
+
+        for network in network_data:
+            net_name = network['name']
+
+            if net_name not in network_list:
+                continue
+
+            # fill interfaces
+            nic_name = network.get('dev')
+            if net_name == 'admin':
+                interfaces[nic_name] = {}
+                ip = 'dhcp'
+                role = nic_name
+            else:
+                interfaces[nic_name] = {'mtu': 1500}
+                ip = network.get('ip')
+                role = net_bridge[net_name]
+                nic_net.setdefault(nic_name, []).append(net_name)
+                br_pr_tag[net_bridge[net_name]] = network.get('vlan')
+
+            # fill endpoints
+            endpoints[net_bridge[net_name]] = {'IP': [ip]}
+            if net_name == 'public' and network.get('gateway'):
+                endpoints[net_bridge[net_name]].update(
+                    {'gateway': network['gateway']})
+
+            #fill roles
+            for r in net_role[net_name]:
+                roles[r] = role
+
+        def add_bridge_port(br_name, port_name):
+            transformations.append({'action': 'add-br',
+                                    'name': br_name})
+            add_port(br_name, port_name)
+
+        def add_bridge_patch(br_name, peer_name):
+            transformations.append({'action': 'add-br',
+                                    'name': br_name})
+            transformations.append({'action': 'add-patch',
+                                    'bridges': [br_name, peer_name],
+                                    'tags': [br_pr_tag[peer_name],
+                                             br_pr_tag[br_name]],
+                                    'trunks': []})
+
+        def add_port(br_name, port_name):
+            port = {'action': 'add-port',
+                    'name': port_name,
+                    'bridge': br_name}
+            if port_name in br_pr_list:
+                port.update({'type': 'internal',
+                             'tag': br_pr_tag[port_name],
+                             'trunks': []})
+            transformations.append(port)
+
+        #fill transformations
+        all_bridged = frozenset(['management', 'private', 'public'])
+        for nic in nic_net.keys():
+            net_names = set(nic_net[nic])
+            bridged = net_names.intersection(all_bridged)
+            non_bridged = net_names - bridged
+            if bridged:
+                net_name = list(bridged)[0]
+                bridged.remove(net_name)
+                br_first = net_bridge[net_name]
+            else:
+                br_first = 'br-' + nic
+            add_bridge_port(br_first, nic)
+            for net_name in bridged:
+                add_bridge_patch(net_bridge[net_name], br_first)
+            for net_name in non_bridged:
+                add_port(net_bridge[net_name], br_first)
+
+        #compose network scheme
+        network_scheme = {
+            'version': '1.0',
+            'provider': 'ovs',
+            'interfaces': interfaces,
+            'endpoints': endpoints,
+            'roles': roles,
+            'transformations': transformations
+        }
+        return network_scheme
 
     @classmethod
     def configure_interfaces(cls, network_data):
