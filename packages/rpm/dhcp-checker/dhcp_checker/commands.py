@@ -12,11 +12,11 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
-from cliff import lister
-from cliff import command
-from dhcp_checker import api
-from itertools import chain
 import json
+
+from cliff import command
+from cliff import lister
+from dhcp_checker import api
 
 
 class BaseCommand(command.Command):
@@ -25,9 +25,9 @@ class BaseCommand(command.Command):
     def get_parser(self, prog_name):
         parser = super(BaseCommand, self).get_parser(prog_name)
         parser.add_argument('--timeout', default=5, type=int,
-            help="Provide timeout for each network request")
+                            help="Provide timeout for each network request")
         parser.add_argument('--repeat', default=2, type=int,
-            help="Provide number of repeats for request")
+                            help="Provide number of repeats for request")
         return parser
 
 
@@ -39,13 +39,13 @@ class ListDhcpServers(lister.Lister, BaseCommand):
         parser = super(ListDhcpServers, self).get_parser(prog_name)
         parser.add_argument(
             '--ifaces', metavar='I', nargs='+',
-            help='If no eth provided - will run against all except lo')
+            help='Provide iface or list ifaces')
         return parser
 
     def take_action(self, parsed_args):
         res = api.check_dhcp(parsed_args.ifaces,
-                            timeout=parsed_args.timeout,
-                            repeat=parsed_args.repeat)
+                             timeout=parsed_args.timeout,
+                             repeat=parsed_args.repeat)
         first = res.next()
         columns = first.keys()
         return columns, [first.values()] + [item.values() for item in res]
@@ -85,14 +85,15 @@ class DhcpWithVlansCheck(lister.Lister, BaseCommand):
 
     def get_parser(self, prog_name):
         parser = super(DhcpWithVlansCheck, self).get_parser(prog_name)
-        parser.add_argument('config',
-                             help='Ethernet interface name')
+        parser.add_argument('config', help=(
+            "Json config of iface, vlans."
+            "Example:{'eth0': (100, 101), 'eth1': (100, 102)}"))
         return parser
 
     def take_action(self, parsed_args):
         res = api.check_dhcp_with_vlans(json.loads(parsed_args.config),
-                            timeout=parsed_args.timeout,
-                            repeat=parsed_args.repeat)
+                                        timeout=parsed_args.timeout,
+                                        repeat=parsed_args.repeat)
         first = res.next()
         columns = first.keys()
         return columns, [first.values()] + [item.values() for item in res]
