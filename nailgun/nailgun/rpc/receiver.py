@@ -592,7 +592,7 @@ class NailgunReceiver(object):
         messages = []
         result = collections.defaultdict(list)
         message_template = (u"Dhcp server on {server_id} - {mac}."
-                             "Discovered from node {yiaddr} on {iface}.")
+                            "Discovered from node {yiaddr} on {iface}.")
 
         task_uuid = kwargs.get('task_uuid')
         nodes = kwargs.get('nodes', [])
