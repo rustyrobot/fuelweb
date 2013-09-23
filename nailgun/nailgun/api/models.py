@@ -123,6 +123,9 @@ class Cluster(Base):
     STATUSES = ('new', 'deployment', 'operational', 'error', 'remove')
     NET_MANAGERS = ('FlatDHCPManager', 'VlanManager')
     GROUPING = ('roles', 'hardware', 'both')
+    NET_PROVIDERS = ('NovaNet', 'Neutron')
+    NET_L23_PROVIDERS = ('OVS')
+    NET_SEGMENT_TYPES = ('vlan', 'gre')
     id = Column(Integer, primary_key=True)
     mode = Column(
         Enum(*MODES, name='cluster_mode'),
@@ -133,6 +136,21 @@ class Cluster(Base):
         Enum(*STATUSES, name='cluster_status'),
         nullable=False,
         default='new'
+    )
+    net_provider = Column(
+        Enum(*NET_PROVIDERS, name='net_provider'),
+        nullable=False,
+        default=NET_PROVIDERS[0]
+    )
+    net_l23_provider = Column(
+        Enum(*NET_L23_PROVIDERS, name='net_l23_provider'),
+        nullable=False,
+        default=NET_L23_PROVIDERS[0]
+    )
+    net_segment_type = Column(
+        Enum(*NET_SEGMENT_TYPES, name='net_segment_type'),
+        nullable=False,
+        default=NET_SEGMENT_TYPES[0]
     )
     net_manager = Column(
         Enum(*NET_MANAGERS, name='cluster_net_manager'),
@@ -850,3 +868,32 @@ class RedHatAccount(Base):
                           nullable=False)
     satellite = Column(String(250))
     activation_key = Column(String(300))
+
+
+class NeutronConfiguration(Base):
+    """
+    Neutron сonfiguration settings
+    """
+    __tablename__ = 'neutron_configuration'
+    SEGMENTATION_TYPES = ('vlan', 'gre')
+
+    id = Column(Integer, primary_key=True)
+
+    parameters = Column(JSON, default={})
+    predefined_networks = Column(JSON, default={})
+
+    # DB parameters
+    db_reconnect_interval = Column(Integer) #in seconds
+    # Metadata parameters
+    metadata_proxy_shared_secret = Column(String(100), nullable=False)
+    # L2 parameters
+    base_mac = Column(String(100), nullable=False) #"fa:16:3e:00:00:00",
+    segmentation_type = Column(Enum(*SEGMENTATION_TYPES,
+                                    name='segmentation_type'), nullable=False)
+    #affects 'enable_tunneling' parameter
+    segmentation_id_ranges = Column(String(25), nullable=False)
+    #"1:65534" for GRE , "2:4094" for vlan
+    #affects 'network_vlan_ranges', 'tunnel_id_ranges' parameters
+    # L3 parameters
+    local_ip = Column(String(25), nullable=False) #"10.108.0.XXX",  # must be configured from network role if GRE
+    public_network = Column(String(25), nullable=False) #"net04_ext", # in "predefined_networks" with public==true

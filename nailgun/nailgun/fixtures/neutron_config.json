@@ -1,0 +1,100 @@
+[
+    {
+        "pk": 1,
+        "model": "nailgun.neutron_configuration",
+        "fields": {
+            "parameters": {
+                "amqp": {
+                    "provider": "rabbitmq",
+                    "username": "",
+                    "passwd": "",
+                    "hosts": "hostname1:5672, hostname2:5672",
+                    "control_exchange": "quantum",
+                    "heartbeat": "60",
+                    "protocol": "tcp",
+                    "rabbit_virtual_host": "/",
+                    "rabbit_ha_queues": true
+                },
+                "database": {
+                    "provider": "mysql",
+                    "host": "10.108.0.254",
+                    "port": "3306",
+                    "database": "quantum",
+                    "username": "quantum_user",
+                    "passwd":   "quantum_password",
+                    "reconnects": "-1",
+                    "reconnect_interval": "2"
+                },
+                "keystone": {
+                    "auth_host": "10.108.0.254",
+                    "auth_port": "35357",
+                    "auth_protocol": "http",
+                    "admin_tenant_name": "services",
+                    "admin_user": "quantum",
+                    "admin_password": "quantum_pass",
+                    "signing_dir": "/var/lib/quantum/"
+                },
+                "server": {
+                    "bind_host": "10.108.0.6",
+                    "bind_port": "9696"
+                },
+                "metadata": {
+                    "nova_metadata_ip": "10.108.0.254",
+                    "nova_metadata_port": "8775",
+                    "metadata_proxy_shared_secret": "secret-word"
+                },
+                "L2": {
+                    "base_mac": "fa:16:3e:00:00:00",
+                    "segmentation_type": "vlan",
+                    "enable_tunneling": false,
+                    "tunnel_id_ranges": "1:65534",
+                    "bridge_mappings": [
+                        "physnet1:br-ex",
+                        "physnet2:br-prv"
+                    ],
+                    "network_vlan_ranges": [
+                        "physnet1",
+                        "physnet2:1000:2999"
+                    ],
+                    "integration_bridge": "br-int",
+                    "tunnel_bridge": "br-tun",
+                    "int_peer_patch_port": "patch-tun",
+                    "tun_peer_patch_port": "patch-int",
+                    "local_ip": "10.108.0.1"
+                },
+                "L3": {
+                    "router_id": null,
+                    "gateway_external_network_id": null,
+                    "use_namespaces": true,
+                    "allow_overlapping_ips": false,
+                    "dhcp_lease_duration": "120",
+                    "public_bridge": "br-ex",
+                    "public_network": "net04_ext",
+                    "send_arp_for_ha": "8",
+                    "resync_interval": "40",
+                    "resync_fuzzy_delay": "5",
+                    "dhcp_agent": {
+                        "enable_isolated_metadata": false,
+                        "enable_metadata_network": false
+                    }
+                },
+                "predefined_networks": {
+                    "net04_ext": {
+                        "subnet": "10.100.100.0/24",
+                        "gateway": "10.100.100.1",
+                        "nameservers": ["8.8.4.4", "8.8.8.8"],
+                        "public": true,
+                        "floating": "10.100.100.130:10.100.100.254"
+                    },
+                    "net04": {
+                        "subnet": "192.168.111.0/24",
+                        "nameservers": [],
+                        "public": false,
+                        "floating": null
+                    }
+                },
+                "root_helper": "sudo quantum-rootwrap /etc/quantum/rootwrap.conf"
+            }
+        }
+    }
+]
